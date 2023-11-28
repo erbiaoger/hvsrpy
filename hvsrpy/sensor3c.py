@@ -123,6 +123,60 @@ class Sensor3c():
         self.meta = {"File Name": "NA", **meta}
 
     @classmethod
+    def from_Stream(cls, st=None):
+        """
+        made by Zhiyu Zhang 2023-11-28
+        
+        Parameters
+        ----------
+        st: obspy.core.stream.Stream
+            st need three components, which are E, N, Z
+            
+            >>> trace11 = obspy.read('./S1_X_1.sac')[0]
+            >>> trace22 = obspy.read('./S1_Y_1.sac')[0]
+            >>> trace33 = obspy.read('./S1_Z_1.sac')[0]
+
+            >>> trace11.meta.channel = 'BHE'
+            >>> trace22.meta.channel = 'BHN'
+            >>> trace33.meta.channel = 'BHZ'
+
+            >>> sensor = hvsrpy.Sensor3c.from_Stream(obspy.Stream([trace11, trace22, trace33]))
+
+        Returns
+        -------
+        ns: TimeSeries
+            North-south component, time domain.
+        ew: TimeSeries
+            East-west component, time domain.
+        vt: TimeSeries
+            Vertical component, time domain.
+        meta: dict
+            meta information for object, default is `None`.
+
+        """
+        traces = st
+        
+        found_ew, found_ns, found_vt = False, False, False
+        for trace in traces:
+            if trace.meta.channel.endswith("E") and not found_ew:
+                ew = TimeSeries.from_trace(trace)
+                found_ew = True
+            elif trace.meta.channel.endswith("N") and not found_ns:
+                ns = TimeSeries.from_trace(trace)
+                found_ns = True
+            elif trace.meta.channel.endswith("Z") and not found_vt:
+                vt = TimeSeries.from_trace(trace)
+                found_vt = True
+            else:
+                msg = "Missing, duplicate, or incorrectly named components."
+                raise ValueError(msg)
+
+        meta = {"File Name": "test.mseed"}
+        
+        return cls(ns, ew, vt, meta)
+
+
+    @classmethod
     def from_mseed(cls, fname=None, fnames_1c=None):
         """Create from .mseed file(s).
 
